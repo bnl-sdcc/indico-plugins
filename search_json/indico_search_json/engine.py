@@ -23,25 +23,6 @@ from indico_search import SearchEngine
 
 
 
-
-class Result(object):
-    def __init__(self, title, url, author):
-    self.title = title  
-    self.url = url  
-    self.author = author    
-
-
-class ResultSchema(Schema):
-    title = fields.Str()
-    url = fields.Url()
-    author = fields.Str()
-
-    @post_load
-    def make_user(self, data):
-        return Result(**data)
-
-
-
 #FIELD_MAP = {'title': 'titlereplica',
 #             'abstract': 'description',
 #             'author': 'authors',
@@ -53,11 +34,19 @@ class JSONSearchEngine(SearchEngine):
    
     @property
     def url(self):
-    return current_plugin.settings.get('search_url')
+        return current_plugin.settings.get('search_url')
 
     def process(self):
+
+        # search values
+        self.username = self.user.name
+        self.useremail = self.user.email
+        self.query_phrase = self.values['phrase']
+        self.query_start_date = self.values['start_date']  # datetime.date object
+        self.query_end_date = self.values['end_date']  # datetime.date object
+        self.query_field = self.values['field']
+
         out = self._query()
-        out = self._deserialize(out)
         return out
 
     def _query(self):
@@ -74,13 +63,4 @@ class JSONSearchEngine(SearchEngine):
             content = json.loads(response.content)
             return content
 
-
-    def _deserialize(self, content):
-        schema = ResultSchema()
-        out = []
-        for item in content:
-            result = schema.load(item)
-            out.append(result.data)
-        return out
-    
 
