@@ -51,35 +51,43 @@ class JSONSearchEngine(SearchEngine):
         return out
 
 
-   def _build_query(self):
+    def _build_query(self):
+        qphrase = self._build_phrase_query()
+        qdate = self._build_date_query()
+        query = 'q=' + qphrase + qdate
+        query = query.replace(' ', '+')
+        return query
 
+
+    def _build_phrase_query(self):
         phrase = self.values['phrase']
         field = self.values['field']
-        start_date = self.values['start_date']
-        end_date = self.values['end_date']
-
-        # change white spaces by + sign in phrase
-        phrase = '+OR+'.join([x.strip() for x in phrase.split()])
-
+        phrase = ' OR '.join([x.strip() for x in phrase.split()])
         if field:
             qphrase = '%s:(%s)' %(field, phrase)
         else:
-            # FIXME: is this correct?
             qphrase = '(%s)' %phrase
+        return qphrase
 
-        # format the date range
+
+    def _build_date_query(self):
+        start_date = self.values['start_date']
+        end_date = self.values['end_date']
+
+        if start_date:
+            start_date = start_date.strftime('%Y-%m-%d')
+        if end_date:
+            end_date = end_date.strftime('%Y-%m-%d')
+
         if start_date and end_date:
-            qdate = '+AND+date:[%s+TO+%s]' %(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            qdate = ' AND date:[%s TO %s]' %(start_date, end_date)
         if start_date and not end_date:
-            qdate = '+AND+date:[%s+TO+*}' %start_date.strftime('%Y-%m-%d')
+            qdate = ' AND date:[%s TO *}' %start_date
         if not start_date and end_date:
-            qdate = '+AND+date:{*+TO+%s]' %end_date.strftime('%Y-%m-%d')
+            qdate = ' AND date:{* TO %s]' %end_date
         if not start_date and not end_date:
             qdate = ''
-
-        query = 'q=' + qphrase + qdate
-        print >> open('/tmp/log', 'a'), "indico_search_json/engine.py/JSONSearchEngine.process query string %s" %query
-        return query
+        return qdate
 
 
     def _query(self, query):
