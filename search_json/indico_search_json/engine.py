@@ -46,10 +46,43 @@ class JSONSearchEngine(SearchEngine):
         self.query_end_date = self.values['end_date']  # datetime.date object
         self.query_field = self.values['field']
 
-        out = self._query()
+        query = self._build_query()
+        out = self._query(query)
         return out
 
-    def _query(self):
+
+   def _build_query(self):
+
+        phrase = self.values['phrase']
+        field = self.values['field']
+        start_date = self.values['start_date']
+        end_date = self.values['end_date']
+
+        # change white spaces by + sign in phrase
+        phrase = '+OR+'.join([x.strip() for x in phrase.split()])
+
+        if field:
+            qphrase = '%s:(%s)' %(field, phrase)
+        else:
+            # FIXME: is this correct?
+            qphrase = '(%s)' %phrase
+
+        # format the date range
+        if start_date and end_date:
+            qdate = '+AND+date:[%s+TO+%s]' %(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+        if start_date and not end_date:
+            qdate = '+AND+date:[%s+TO+*}' %start_date.strftime('%Y-%m-%d')
+        if not start_date and end_date:
+            qdate = '+AND+date:{*+TO+%s]' %end_date.strftime('%Y-%m-%d')
+        if not start_date and not end_date:
+            qdate = ''
+
+        query = 'q=' + qphrase + qdate
+        print >> open('/tmp/log', 'a'), "indico_search_json/engine.py/JSONSearchEngine.process query string %s" %query
+        return query
+
+
+    def _query(self, query):
         endpoint = '/api/records/'  # FIXME, it has to be the same endpoint set by the livesync plugin
         url = '{0}{1}'.format(self.url, endpoint)
         headers = {
@@ -57,8 +90,7 @@ class JSONSearchEngine(SearchEngine):
             'Accept': 'application/json',
             'Authorization': 'Bearer <ACCESS_TOKEN>'
         }
-        param = # FIXME !!!!!!!!!!
-        response = requests.get(url, headers=headers, param=param)
+        response = requests.get(url, headers=headers, paramsquery)
         if response.ok:
             content = json.loads(response.content)
             return content
