@@ -47,7 +47,9 @@ class JSONSearchEngine(SearchEngine):
         self.query_field = self.values['field']
 
         query = self._build_query()
-        out = self._query(query)
+        query_d = {}
+        query_d['q'] = query
+        out = self._query(query_d)
         return out
 
 
@@ -90,7 +92,7 @@ class JSONSearchEngine(SearchEngine):
         return qdate
 
 
-    def _query(self, query):
+    def _query(self, query_d):
         endpoint = '/api/records/'  # FIXME, it has to be the same endpoint set by the livesync plugin
         url = '{0}{1}'.format(self.url, endpoint)
         headers = {
@@ -98,7 +100,7 @@ class JSONSearchEngine(SearchEngine):
             'Accept': 'application/json',
             'Authorization': 'Bearer <ACCESS_TOKEN>'
         }
-        response = requests.get(url, headers=headers, paramsquery)
+        response = requests.get(url, headers=headers, query_d)
         if response.ok:
             content = json.loads(response.content)
             return content
